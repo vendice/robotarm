@@ -12,7 +12,7 @@ GYRO_REGISTER_START = 0x43
 
 GYRO_1 = 0x68
 
-soundfile = "/home/pi/progs/robotarm/sounds/robot.wav"
+soundfile = "/home/pi/progs/robotarm/sounds/motor.wav"
 bus = smbus.SMBus(1)
 
 
@@ -25,7 +25,7 @@ def twos_compliment (value):
         return value
 
 
-def read_gyro (device):
+def get_gyros (device):
     # returns the scaled gyro values of all three axis of the address in device
 
     raw_gyro = bus.read_i2c_block_data(device, GYRO_REGISTER_START, 6)
@@ -37,11 +37,43 @@ def read_gyro (device):
     return x,y,z
 
 
+def get_offset_gyros (device):
+    # determines the avergae drift of the gyros 
+
+    sum_x = 0.0
+    sum_y = 0.0
+    sum_z = 0.0
+
+    for i in range(100):
+        x, y, z = get_gyros(device)
+        sum_x += x
+        sum_y += y
+        sum_z += z
+        time.sleep(0.01)
+
+    return sum_x / 100, sum_y / 100, sum_z / 100
+
+
 # wake gyrometer
 bus.write_byte_data(GYRO_1, POWER_MGMT_1, 0)
 
-gyro_1_x, gyro_1_y, gyro_1_z = read_gyro(GYRO_1)
+# will only be executed if program is called from commandline, not imported
+if __name__ == "__main__":
+    
+    pygame.mixer.init()
+    pygame.mixer.music.load(soundfile)
+    pygame.mixer.music.play(-1)
+    pygame.mixer.music.pause()
+    d_x, d_y, d_z = get_offset_gyros(GYRO_1)
 
-print gyro_1_x, gyro_1_y, gyro_1_z
+    while True:
+        g_x, g_y, g_z = get_gyros(GYRO_1)
 
+        if (g_z - d_z > 5.0 or g_z - d_z < -5.0 ):
+            if True: #not pygame.mixer.music.get_busy():
+                pygame.mixer.music.unpause()
+        else:
+            if True: #pygame.mixer.music.get_busy():
+                pygame.mixer.music.pause()
+        time.sleep(0.01)
 
