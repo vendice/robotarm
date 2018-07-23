@@ -10,7 +10,9 @@ POWER_MGMT_2 = 0x6c
 
 GYRO_REGISTER_START = 0x43
 
-GYRO_1 = 0x68
+GYRO_ADDR = 0x68
+
+TCA_ADDR = 0x70
 
 soundfile = "/home/pi/progs/robotarm/sounds/motor.wav"
 bus = smbus.SMBus(1)
@@ -54,8 +56,18 @@ def get_offset_gyros (device):
     return sum_x / 100, sum_y / 100, sum_z / 100
 
 
-# wake gyrometer
-bus.write_byte_data(GYRO_1, POWER_MGMT_1, 0)
+def set_tca_channel (channel):
+    ''' selects the channel to communicate to a value between 0 and 7 channel 0 is 0b00000001
+        channel 1 0b00000010
+    '''
+    if channel > 7:
+        return
+    bus.write_byte(TCA_ADDR, 1 << channel)
+
+
+# set tca to channel 0 and wake gyrometer
+set_tca_channel (0)
+bus.write_byte_data(GYRO_ADDR, POWER_MGMT_1, 0)
 
 # will only be executed if program is called from commandline, not imported
 if __name__ == "__main__":
@@ -64,11 +76,11 @@ if __name__ == "__main__":
     pygame.mixer.music.load(soundfile)
     pygame.mixer.music.play(-1)
     pygame.mixer.music.pause()
-    d_x, d_y, d_z = get_offset_gyros(GYRO_1)
+    d_x, d_y, d_z = get_offset_gyros(GYRO_ADDR)
 
     while True:
-        g_x, g_y, g_z = get_gyros(GYRO_1)
-
+        g_x, g_y, g_z = get_gyros(GYRO_ADDR)
+        print g_x, g_y, g_z
         if (g_z - d_z > 5.0 or g_z - d_z < -5.0 ):
             if True: #not pygame.mixer.music.get_busy():
                 pygame.mixer.music.unpause()
